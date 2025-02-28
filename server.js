@@ -21,16 +21,50 @@ app.get('/write', function(요청, 응답){
  
 
 app.post('/add', async (req, res) => {
+    const session = db.client.startSession();
+
     try {
-        const data = req.body; // 클라이언트가 보낸 데이터를 받음
-        await db.collection('post').insertOne(data);
-        console.log('✅ 데이터 저장 완료:', data);
+        const data = req.body; // 요청으로 받은 데이터
+        await session.withTransaction(async () => {
+            // 1. 게시물 갯수 가져오기
+            const counterCollection = db.collection('counter');
+            const counter = await counterCollection.findOne({ name: '게시물갯수' }, { session });
+
+            if (!counter) {
+                throw new Error("카운터 정보가 없습니다.");
+            }
+
+            const 총게시물갯수 = counter.totalPost;
+
+            // 2. post 저장 (게시물 번호 = 총게시물갯수 + 1)
+            const newPost = {
+                _id: 총게시물갯수 + 1,
+                title: data.title,
+                content: data.content
+            };
+
+            await db.collection('post').insertOne(newPost, { session });
+            console.log('✅ 새 게시물 저장 완료:', newPost);
+
+            // 3. counter 업데이트 (totalPost + 1)
+            await counterCollection.updateOne(
+                { name: '게시물갯수' },
+                { $inc: { totalPost: 1 } },
+                { session }
+            );
+
+            console.log('✅ 게시물 갯수 업데이트 완료');
+        });
+
         res.send("데이터 저장 완료!");
     } catch (error) {
         console.error("❌ 데이터 저장 실패:", error);
         res.status(500).send("데이터 저장 실패!");
+    } finally {
+        await session.endSession();
     }
-}); 
+});
+
 
 app.get('/list', async function(req, res) {
     try {
