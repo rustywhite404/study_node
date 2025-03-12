@@ -85,6 +85,30 @@ app.delete('/delete', function(req, res){
     res.send('삭제완료')
   });
 
+app.get('/detail/:id', async (req, res) => {
+    try {
+        const postId = parseInt(req.params.id);
+        console.log('🔍 게시글 ID:', postId);
+
+        // findOne을 Promise 기반으로 사용
+        const result = await db.collection('post').findOne({ _id: postId });
+
+        if (!result) {
+            console.warn('⚠️ 해당 ID의 게시글을 찾을 수 없습니다:', postId);
+            return res.status(404).send('게시글을 찾을 수 없어요.');
+        }
+
+        console.log('✅ 데이터 상세보기:', result);
+        res.render('detail.ejs', { data: result });
+
+    } catch (error) {
+        console.error('❗️데이터 조회 중 에러 발생:', error);
+        res.status(500).send('서버 에러가 발생했어요.');
+    }
+});
+
+
+
 
 async function connectDB() {
     try {
