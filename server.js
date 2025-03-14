@@ -6,7 +6,12 @@ let db;
 const uri = "mongodb+srv://rustywhite404:%40Rkgus6628@cluster0.qw0l4.mongodb.net/myDB?retryWrites=true&w=majority&appName=Cluster0";
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({extended: true})) 
-app.use('/public', express.static('public'))
+app.use('/public', express.static('public')) 
+
+//http에서 put, delete 요청을 받기 위한 설정 
+//터미널에 npm install method-override 를 입력하여 설치 후 사용 
+const methodOverride = require('method-override')
+app.use(methodOverride('_method'))
 
 app.get('/', function(요청, 응답) {
     응답.render('index.ejs'); // 데이터를 EJS로 전달
@@ -19,7 +24,36 @@ app.get('/pet', function(요청, 응답) {
 app.get('/write', function(요청, 응답){
     응답.render('write.ejs'); 
 })
- 
+
+app.get('/edit/:id', async function(요청, 응답){
+    const postId = parseInt(요청.params.id);
+    const result = await db.collection('post').findOne({ _id: postId });
+    응답.render('edit.ejs', {post: result}); // 데이터를 EJS로 전달
+})
+
+app.put('/edit', async function (req, res) {
+    try {
+        const postId = parseInt(req.body.id);
+        console.log("호출:", postId);
+
+        const result = await db.collection('post').updateOne(
+            { _id: postId },
+            { $set: { title: req.body.title, content: req.body.content } }
+        );
+
+        if (result.modifiedCount === 0) {
+            console.warn('⚠️ 수정된 데이터가 없습니다.');
+            return res.status(404).send('수정할 게시글을 찾을 수 없어요.');
+        }
+
+        console.log('✅ 수정 완료:', result);
+        res.redirect('/list');
+
+    } catch (error) {
+        console.error('❌ 수정 중 에러 발생:', error);
+        res.status(500).send('서버 에러!');
+    }
+});
 
 app.post('/add', async (req, res) => {
     const session = db.client.startSession();
