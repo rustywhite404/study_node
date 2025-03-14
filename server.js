@@ -6,9 +6,10 @@ let db;
 const uri = "mongodb+srv://rustywhite404:%40Rkgus6628@cluster0.qw0l4.mongodb.net/myDB?retryWrites=true&w=majority&appName=Cluster0";
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({extended: true})) 
+app.use('/public', express.static('public'))
 
 app.get('/', function(요청, 응답) {
-    응답.sendFile(__dirname + '/index.html')
+    응답.render('index.ejs'); // 데이터를 EJS로 전달
 });
 
 app.get('/pet', function(요청, 응답) { 
@@ -16,7 +17,7 @@ app.get('/pet', function(요청, 응답) {
   })
 
 app.get('/write', function(요청, 응답){
-    응답.sendFile(__dirname + '/write.html')
+    응답.render('write.ejs'); 
 })
  
 
