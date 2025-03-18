@@ -43,6 +43,21 @@ app.get('/login', function(요청, 응답){
     응답.render('login.ejs'); 
 })
 
+//get 안에 loginCheck처럼 미들웨어를 넣을 수 있다. 그러면 /mypage 요청과 mypage.ejs 응답 사이에 loginCheck가 실행된다. 
+app.get('/mypage', loginCheck, function (요청, 응답) {
+    console.log("로그인한 유저:", 요청.user); // 로그인한 유저 정보
+    응답.render('mypage.ejs', {user: 요청.user}) // 로그인한 유저 정보를 EJS로 전달
+}) 
+
+function loginCheck(req, res, next) {
+    if (req.user) { // 로그인 상태 확인. deserializeUser 함수에서 req.user에 사용자 정보를 저장했음. 즉 req.user는 deserializeUser가 보내준 로그인 유저의 정보. 
+        next(); // 다음 미들웨어로 이동
+    } else {
+        res.redirect('/login'); // 로그인 페이지로 리다이렉트
+    }
+}
+
+
 //passport.authenticate를 통해 응답 전에 local 방식으로 아이디/비밀번호를 인증받을 수 있다. 
 //failureRedirect는 인증 실패 시 이동시켜줄 경로. 
 app.post('/login', passport.authenticate('local', {
