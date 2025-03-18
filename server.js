@@ -8,6 +8,20 @@ app.set('view engine', 'ejs');
 app.use(express.urlencoded({extended: true})) 
 app.use('/public', express.static('public')) 
 
+
+//세션으로 로그인 유지하기 위한 설정
+//터미널에 npm install passport passport-local express-session 를 입력하여 설치 후 사용
+//실제 서비스시 express-session 말고 MongoDB에 세션데이터를 저장해주는 라이브러리를 이용하면 더 좋다 
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const session = require('express-session');
+
+app.use(session({secret : '비밀코드', resave : true, saveUninitialized: false}));
+app.use(passport.initialize());
+app.use(passport.session()); 
+
+
+
 //http에서 put, delete 요청을 받기 위한 설정 
 //터미널에 npm install method-override 를 입력하여 설치 후 사용 
 const methodOverride = require('method-override')
@@ -24,6 +38,18 @@ app.get('/pet', function(요청, 응답) {
 app.get('/write', function(요청, 응답){
     응답.render('write.ejs'); 
 })
+
+app.get('/login', function(요청, 응답){
+    응답.render('login.ejs'); 
+})
+
+//passport.authenticate를 통해 응답 전에 local 방식으로 아이디/비밀번호를 인증받을 수 있다. 
+//failureRedirect는 인증 실패 시 이동시켜줄 경로. 
+app.post('/login', passport.authenticate('local', {
+    failureRedirect: '/fail'
+}), function (req, res) {
+    res.redirect('/'); 
+});
 
 app.get('/edit/:id', async function(요청, 응답){
     const postId = parseInt(요청.params.id);
@@ -142,8 +168,43 @@ app.get('/detail/:id', async (req, res) => {
     }
 });
 
+passport.use(new LocalStrategy({
+    usernameField: 'id',
+    passwordField: 'pw',
+    session: true,
+    passReqToCallback: false,
+}, async function (입력한아이디, 입력한비번, done) {
+    try {
+        const 결과 = await db.collection('login').findOne({ id: 입력한아이디 });
+        if (!결과) {
+            return done(null, false, { message: '존재하지 않는 아이디입니다.' });
+        }
 
+        if (입력한비번 === 결과.pw) {
+            return done(null, 결과); // 로그인 성공
+        } else {
+            return done(null, false, { message: '비밀번호가 틀렸습니다.' });
+        }
+    } catch (error) {
+        return done(error);
+    }
+}));
 
+passport.serializeUser(function (user, done) {
+    done(null, user.id); // 세션에 사용자 id 저장
+});
+
+passport.deserializeUser(async function (아이디, done) {
+    try {
+        const 결과 = await db.collection('login').findOne({ id: 아이디 });
+        if (!결과) {
+            return done(null, false);
+        }
+        done(null, 결과); // 세션에서 사용자 정보 복원
+    } catch (error) {
+        done(error);
+    }
+});
 
 async function connectDB() {
     try {
