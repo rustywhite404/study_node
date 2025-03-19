@@ -3,7 +3,12 @@ const MongoClient = require('mongodb').MongoClient;
 const app = express(); 
 let db;
 
-const uri = "mongodb+srv://rustywhite404:%40Rkgus6628@cluster0.qw0l4.mongodb.net/myDB?retryWrites=true&w=majority&appName=Cluster0";
+
+//dotenv를 사용하여 환경변수 설정
+//터미널에 npm install dotenv 를 입력하여 설치 후 사용
+require('dotenv').config()
+
+const uri = process.env.DB_URI; // MongoDB URI를 환경변수에서 가져옴
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({extended: true})) 
 app.use('/public', express.static('public')) 
@@ -19,7 +24,6 @@ const session = require('express-session');
 app.use(session({secret : '비밀코드', resave : true, saveUninitialized: false}));
 app.use(passport.initialize());
 app.use(passport.session()); 
-
 
 
 //http에서 put, delete 요청을 받기 위한 설정 
