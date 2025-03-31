@@ -3,6 +3,9 @@ const MongoClient = require('mongodb').MongoClient;
 const app = express(); 
 let db;
 
+//터미널에 npm install bcrypt 를 입력하여 설치 후 사용
+const bcrypt = require('bcrypt'); // 비밀번호 암호화 라이브러리 
+
 
 //dotenv를 사용하여 환경변수 설정
 //터미널에 npm install dotenv 를 입력하여 설치 후 사용
@@ -42,6 +45,36 @@ app.get('/pet', function(요청, 응답) {
 app.get('/write', function(요청, 응답){
     응답.render('write.ejs'); 
 })
+
+app.get('/join', function(요청, 응답){
+    응답.render('join.ejs'); 
+})
+
+app.post('/join', async (req, res) => {
+    try {
+        const { id, pw } = req.body;
+
+        // 1️⃣ 이미 존재하는 아이디인지 확인
+        const existingUser = await db.collection('login').findOne({ id });
+        if (existingUser) {
+            console.warn('⚠️ 이미 존재하는 아이디입니다:', id);
+            return res.status(400).send('이미 존재하는 아이디입니다.');
+        }
+
+        // 2️⃣ 비밀번호 암호화
+        const hash = await bcrypt.hash(pw, 10); // 두 번째 인자 10 → 해시 강도 (saltRounds)
+
+        // 3️⃣ DB에 저장
+        const result = await db.collection('login').insertOne({ id, pw: hash });
+        console.log('✅ 회원가입 완료:', result);
+
+        res.redirect('/'); // 회원가입 후 홈으로 이동
+    } catch (error) {
+        console.error('❌ 회원가입 실패:', error);
+        res.status(500).send('회원가입 실패!');
+    }    
+});
+
 
 app.get('/login', function(요청, 응답){
     응답.render('login.ejs'); 
@@ -187,6 +220,7 @@ app.get('/detail/:id', async (req, res) => {
     }
 });
 
+
 passport.use(new LocalStrategy({
     usernameField: 'id',
     passwordField: 'pw',
@@ -199,7 +233,9 @@ passport.use(new LocalStrategy({
             return done(null, false, { message: '존재하지 않는 아이디입니다.' });
         }
 
-        if (입력한비번 === 결과.pw) {
+        // 비밀번호 비교 → bcrypt.compare() 사용
+        const isMatch = await bcrypt.compare(입력한비번, 결과.pw);
+        if (isMatch) {
             return done(null, 결과); // 로그인 성공
         } else {
             return done(null, false, { message: '비밀번호가 틀렸습니다.' });
